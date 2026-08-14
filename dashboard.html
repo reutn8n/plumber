@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>דשבורד ביצועים | יאיר שמחי אינסטלציה</title>
+<meta name="robots" content="noindex, nofollow" />
+<meta name="theme-color" content="#06213a">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'><rect width='42' height='42' rx='10' fill='%2306213a'/><path d='M15 10h6v7a4 4 0 0 0 4 4h2v7h-6v-7a4 4 0 0 0-4-4h-2z' fill='%23ff8a3d'/><circle cx='29' cy='12' r='2.2' fill='%234fa8dc'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700&family=Rubik:wght@600;700;800;900&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css" />
+<style>
+  .dash-hero{background:var(--navy);color:#fff;padding:44px 0 38px;text-align:center;}
+  .dash-hero .tag{color:var(--amber);}
+  .dash-hero h1{color:#fff;font-size:clamp(26px,4vw,36px);}
+
+  .gate{max-width:380px;margin:60px auto;padding:0 20px;text-align:center;}
+  .gate input{
+    width:100%;padding:14px 16px;border-radius:9px;border:2px solid var(--line-strong);
+    font-family:inherit;font-size:16px;margin-top:16px;background:#fff;color:var(--ink);
+  }
+  .gate button{margin-top:14px;width:100%;justify-content:center;}
+  .gate-error{color:#c0392b;font-weight:700;font-size:14px;margin-top:10px;display:none;}
+  .gate-loading{opacity:.7;font-size:14px;margin-top:10px;display:none;}
+
+  #dashboard-content{padding:40px 0 80px;}
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:36px;}
+  @media (max-width:900px){.cards{grid-template-columns:repeat(2,1fr);}}
+  @media (max-width:520px){.cards{grid-template-columns:1fr;}}
+  .card{
+    background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px 20px;
+    box-shadow:0 8px 22px -14px rgba(6,33,58,.25);
+  }
+  .card .label{font-size:13px;font-weight:700;opacity:.65;}
+  .card .value{font-family:"Rubik",sans-serif;font-weight:900;font-size:32px;color:var(--navy);margin-top:6px;}
+  .card .sub{font-size:12.5px;margin-top:6px;font-weight:700;}
+  .sub.up{color:#1a8a4a;}
+  .sub.down{color:#c0392b;}
+  .sub.flat{opacity:.6;}
+
+  .panel{
+    background:#fff;border:1px solid var(--line);border-radius:14px;padding:26px 24px;
+    margin-bottom:28px;box-shadow:0 8px 22px -14px rgba(6,33,58,.2);
+  }
+  .panel h2{font-size:19px;color:var(--navy);margin-bottom:18px;}
+  .chart-wrap{overflow-x:auto;}
+  .chart-wrap svg{display:block;min-width:600px;width:100%;height:180px;}
+  .bar{fill:var(--blue);}
+  .bar:hover{fill:var(--amber);}
+
+  table.pages{width:100%;border-collapse:collapse;font-size:14.5px;}
+  table.pages th{text-align:right;font-size:12.5px;opacity:.6;padding:8px 6px;border-bottom:2px solid var(--line-strong);}
+  table.pages td{padding:10px 6px;border-bottom:1px solid var(--line);}
+  table.pages td.num{font-weight:800;color:var(--navy);text-align:left;}
+
+  .insights ul{margin:0;padding-inline-start:22px;}
+  .insights li{margin-bottom:10px;font-size:15px;}
+
+  #dashboard-content[hidden], .gate[hidden]{display:none;}
+  .logout-row{text-align:left;margin-bottom:18px;}
+  .logout-row button{
+    background:none;border:1px solid var(--line-strong);border-radius:8px;padding:8px 16px;
+    font-family:inherit;font-weight:700;font-size:13px;color:var(--navy);cursor:pointer;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap header-inner">
+    <div class="brand">
+      <svg width="44" height="44" viewBox="0 0 42 42" fill="none" aria-hidden="true">
+        <rect width="42" height="42" rx="10" fill="#06213a"/>
+        <path d="M15 10h6v7a4 4 0 0 0 4 4h2v7h-6v-7a4 4 0 0 0-4-4h-2z" fill="#ff8a3d"/>
+        <circle cx="29" cy="12" r="2.2" fill="#4fa8dc"/>
+      </svg>
+      <div><b>יאיר שמחי אינסטלציה</b><small>דשבורד ביצועים · פרטי</small></div>
+    </div>
+  </div>
+</header>
+
+<section class="dash-hero">
+  <div class="wrap">
+    <span class="tag">פרטי ומאובטח</span>
+    <h1>דשבורד ביצועים</h1>
+    <p>נתונים חיים מ-Google Analytics — 30 הימים האחרונים</p>
+  </div>
+</section>
+
+<div id="gate" class="gate">
+  <p>הזיני סיסמה כדי לצפות בנתונים</p>
+  <input type="password" id="pw-input" placeholder="סיסמה" autocomplete="current-password" />
+  <button class="btn btn-amber" id="pw-submit" type="button" style="display:flex;">כניסה</button>
+  <div class="gate-loading" id="gate-loading">טוען נתונים…</div>
+  <div class="gate-error" id="gate-error">סיסמה שגויה, נסי שוב.</div>
+</div>
+
+<main id="dashboard-content" hidden>
+  <div class="wrap">
+    <div class="logout-row"><button id="logout-btn" type="button">יציאה</button></div>
+
+    <div class="cards" id="cards"></div>
+
+    <div class="panel">
+      <h2>כניסות לאתר — לפי יום (30 יום אחרונים)</h2>
+      <div class="chart-wrap"><svg id="chart" viewBox="0 0 600 180" preserveAspectRatio="none"></svg></div>
+    </div>
+
+    <div class="panel">
+      <h2>העמודים הפופולריים ביותר</h2>
+      <table class="pages" id="pages-table">
+        <thead><tr><th>עמוד</th><th>צפיות</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="panel insights">
+      <h2>ניתוח ומסקנות</h2>
+      <ul id="insights-list"></ul>
+    </div>
+  </div>
+</main>
+
+<script>
+(function () {
+  var gate = document.getElementById('gate');
+  var content = document.getElementById('dashboard-content');
+  var pwInput = document.getElementById('pw-input');
+  var pwSubmit = document.getElementById('pw-submit');
+  var errorBox = document.getElementById('gate-error');
+  var loadingBox = document.getElementById('gate-loading');
+
+  function fetchData(password) {
+    errorBox.style.display = 'none';
+    loadingBox.style.display = 'block';
+    fetch('/.netlify/functions/dashboard-data', {
+      headers: { 'x-dashboard-password': password },
+    })
+      .then(function (res) {
+        if (res.status === 401) throw new Error('unauthorized');
+        if (!res.ok) throw new Error('server_error');
+        return res.json();
+      })
+      .then(function (data) {
+        sessionStorage.setItem('dash-pw', password);
+        loadingBox.style.display = 'none';
+        gate.hidden = true;
+        content.hidden = false;
+        render(data);
+      })
+      .catch(function (err) {
+        loadingBox.style.display = 'none';
+        sessionStorage.removeItem('dash-pw');
+        errorBox.textContent = err.message === 'unauthorized'
+          ? 'סיסמה שגויה, נסי שוב.'
+          : 'שגיאה בטעינת הנתונים. נסי שוב בעוד רגע.';
+        errorBox.style.display = 'block';
+      });
+  }
+
+  pwSubmit.addEventListener('click', function () {
+    if (pwInput.value) fetchData(pwInput.value);
+  });
+  pwInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && pwInput.value) fetchData(pwInput.value);
+  });
+  document.getElementById('logout-btn').addEventListener('click', function () {
+    sessionStorage.removeItem('dash-pw');
+    location.reload();
+  });
+
+  var saved = sessionStorage.getItem('dash-pw');
+  if (saved) fetchData(saved);
+
+  function fmt(n) {
+    return new Intl.NumberFormat('he-IL').format(n);
+  }
+
+  function render(data) {
+    var s = data.summary;
+
+    var changeLabel = '';
+    var changeClass = 'flat';
+    if (s.weekChangePct !== null) {
+      if (s.weekChangePct > 0) { changeLabel = '▲ עלייה של ' + s.weekChangePct + '% מהשבוע הקודם'; changeClass = 'up'; }
+      else if (s.weekChangePct < 0) { changeLabel = '▼ ירידה של ' + Math.abs(s.weekChangePct) + '% מהשבוע הקודם'; changeClass = 'down'; }
+      else { changeLabel = 'ללא שינוי מהשבוע הקודם'; }
+    }
+
+    var cards = [
+      { label: 'כניסות לאתר (30 יום)', value: fmt(s.totalSessions30d), sub: changeLabel, subClass: changeClass },
+      { label: 'צפיות בעמודים (30 יום)', value: fmt(s.totalPageviews30d), sub: '', subClass: '' },
+      { label: 'לחיצות על טלפון / וואטסאפ', value: fmt(s.phoneClicks + s.whatsappClicks), sub: '', subClass: '' },
+      { label: 'פניות ליצירת קשר', value: fmt(s.leads), sub: '', subClass: '' },
+    ];
+    document.getElementById('cards').innerHTML = cards.map(function (c) {
+      return '<div class="card"><div class="label">' + c.label + '</div><div class="value">' + c.value + '</div>' +
+        (c.sub ? '<div class="sub ' + c.subClass + '">' + c.sub + '</div>' : '') + '</div>';
+    }).join('');
+
+    var svg = document.getElementById('chart');
+    var rows = data.dailyRows;
+    var max = Math.max.apply(null, rows.map(function (r) { return r.sessions; }).concat([1]));
+    var barW = 600 / rows.length;
+    var bars = rows.map(function (r, i) {
+      var h = (r.sessions / max) * 160;
+      var x = i * barW;
+      var y = 170 - h;
+      var day = r.date.slice(6, 8) + '/' + r.date.slice(4, 6);
+      return '<rect class="bar" x="' + (x + 1) + '" y="' + y + '" width="' + Math.max(barW - 2, 1) + '" height="' + h + '"><title>' + day + ': ' + r.sessions + ' כניסות</title></rect>';
+    }).join('');
+    svg.innerHTML = bars + '<line x1="0" y1="170" x2="600" y2="170" stroke="#e0d8cc" stroke-width="1"/>';
+
+    var tbody = document.querySelector('#pages-table tbody');
+    tbody.innerHTML = data.topPageRows.map(function (p) {
+      return '<tr><td>' + p.path + '</td><td class="num">' + fmt(p.views) + '</td></tr>';
+    }).join('') || '<tr><td colspan="2">אין עדיין מספיק נתונים</td></tr>';
+
+    var insights = [];
+    if (s.topPage) {
+      insights.push('העמוד הכי פופולרי הוא <b>' + s.topPage.path + '</b> עם ' + fmt(s.topPage.views) + ' צפיות ב-30 הימים האחרונים.');
+    }
+    if (s.weekChangePct !== null) {
+      insights.push(s.weekChangePct >= 0
+        ? 'מספר הכניסות לאתר עלה ב-' + s.weekChangePct + '% בשבוע האחרון לעומת השבוע שלפניו.'
+        : 'מספר הכניסות לאתר ירד ב-' + Math.abs(s.weekChangePct) + '% בשבוע האחרון לעומת השבוע שלפניו.');
+    } else {
+      insights.push('עוד אין מספיק נתונים משבועיים קודמים כדי להשוות מגמה.');
+    }
+    insights.push('סה"כ ' + fmt(s.leads) + ' פניות ליצירת קשר, ו-' + fmt(s.phoneClicks) + ' לחיצות על מספר הטלפון, ו-' + fmt(s.whatsappClicks) + ' לחיצות על וואטסאפ, ב-30 הימים האחרונים.');
+    document.getElementById('insights-list').innerHTML = insights.map(function (t) { return '<li>' + t + '</li>'; }).join('');
+  }
+})();
+</script>
+
+</body>
+</html>
