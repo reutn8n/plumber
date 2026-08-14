@@ -1,3 +1,15 @@
+document.addEventListener('click', function (e) {
+  var link = e.target.closest('a');
+  if (!link || typeof gtag !== 'function') return;
+
+  var href = link.getAttribute('href') || '';
+  if (href.indexOf('tel:') === 0) {
+    gtag('event', 'phone_click', { link_url: href });
+  } else if (href.indexOf('wa.me') !== -1 || href.indexOf('api.whatsapp.com') !== -1) {
+    gtag('event', 'whatsapp_click', { link_url: href });
+  }
+});
+
 document.querySelectorAll('.nav-toggle').forEach(function (btn) {
   btn.addEventListener('click', function () {
     var nav = document.getElementById(btn.getAttribute('aria-controls'));
@@ -35,6 +47,11 @@ if (leadForm) {
     }
 
     var url = 'https://api.whatsapp.com/send/?phone=972525005580&text=' + encodeURIComponent(message) + '&type=phone_number&app_absent=0';
+
+    if (typeof gtag === 'function') {
+      gtag('event', 'generate_lead', { method: 'contact_form' });
+    }
+
     window.open(url, '_blank', 'noopener');
   });
 }
