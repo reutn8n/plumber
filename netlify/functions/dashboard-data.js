@@ -42,6 +42,19 @@ async function getAccessToken(clientEmail, privateKey) {
   return data.access_token;
 }
 
+function last30Dates() {
+  const dates = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    dates.push(`${y}${m}${day}`);
+  }
+  return dates;
+}
+
 async function runReport(propertyId, accessToken, body) {
   const res = await fetch(
     `https://analyticsdata.googleapis.com/v1beta/properties/${propertyId}:runReport`,
@@ -83,6 +96,7 @@ exports.handler = async (event) => {
           { name: 'screenPageViews' },
         ],
         orderBys: [{ dimension: { dimensionName: 'date' } }],
+        keepEmptyRows: true,
       }),
       runReport(propertyId, accessToken, {
         dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
@@ -104,11 +118,19 @@ exports.handler = async (event) => {
       }),
     ]);
 
-    const dailyRows = (daily.rows || []).map((r) => ({
-      date: r.dimensionValues[0].value,
-      sessions: Number(r.metricValues[0].value),
-      users: Number(r.metricValues[1].value),
-      pageviews: Number(r.metricValues[2].value),
+    const rowsByDate = {};
+    (daily.rows || []).forEach((r) => {
+      rowsByDate[r.dimensionValues[0].value] = {
+        sessions: Number(r.metricValues[0].value),
+        users: Number(r.metricValues[1].value),
+        pageviews: Number(r.metricValues[2].value),
+      };
+    });
+    const dailyRows = last30Dates().map((date) => ({
+      date,
+      sessions: (rowsByDate[date] && rowsByDate[date].sessions) || 0,
+      users: (rowsByDate[date] && rowsByDate[date].users) || 0,
+      pageviews: (rowsByDate[date] && rowsByDate[date].pageviews) || 0,
     }));
 
     const last7 = dailyRows.slice(-7);

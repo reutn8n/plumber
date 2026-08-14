@@ -35,10 +35,15 @@
   }
   .card .label{font-size:13px;font-weight:700;opacity:.65;}
   .card .value{font-family:"Rubik",sans-serif;font-weight:900;font-size:32px;color:var(--navy);margin-top:6px;}
+  .card .explain{font-size:12.5px;margin-top:8px;opacity:.55;line-height:1.4;}
   .card .sub{font-size:12.5px;margin-top:6px;font-weight:700;}
   .sub.up{color:#1a8a4a;}
   .sub.down{color:#c0392b;}
   .sub.flat{opacity:.6;}
+  .low-data-note{
+    background:var(--paper-2);border:1px solid var(--line);border-radius:12px;
+    padding:16px 18px;margin-bottom:28px;font-size:14.5px;
+  }
 
   .panel{
     background:#fff;border:1px solid var(--line);border-radius:14px;padding:26px 24px;
@@ -178,6 +183,24 @@
     return new Intl.NumberFormat('he-IL').format(n);
   }
 
+  var PAGE_LABELS = {
+    '/': 'עמוד הבית',
+    '/index.html': 'עמוד הבית',
+    '/about.html': 'אודות יאיר',
+    '/expertise.html': 'מומחיות ופרויקטים',
+    '/blog.html': 'בלוג',
+    '/leak-detection-thermal-camera.html': 'איתור נזילות במצלמה תרמית',
+    '/unclogging-drains.html': 'פתיחת סתימות',
+    '/faucets-toilets-repair.html': 'ברזים וניאגרות',
+    '/water-pressure-issues.html': 'לחץ מים',
+    '/renovation-plumbing.html': 'שיפוצים',
+    '/emergency-plumbing.html': 'קריאות חירום',
+    '/home-plumbing-inspection.html': 'בדק בית',
+  };
+  function pageLabel(path) {
+    return PAGE_LABELS[path] || path;
+  }
+
   function render(data) {
     var s = data.summary;
 
@@ -190,14 +213,15 @@
     }
 
     var cards = [
-      { label: 'כניסות לאתר (30 יום)', value: fmt(s.totalSessions30d), sub: changeLabel, subClass: changeClass },
-      { label: 'צפיות בעמודים (30 יום)', value: fmt(s.totalPageviews30d), sub: '', subClass: '' },
-      { label: 'לחיצות על טלפון / וואטסאפ', value: fmt(s.phoneClicks + s.whatsappClicks), sub: '', subClass: '' },
-      { label: 'פניות ליצירת קשר', value: fmt(s.leads), sub: '', subClass: '' },
+      { label: 'כניסות לאתר (30 יום)', value: fmt(s.totalSessions30d), explain: 'כמה פעמים אנשים נכנסו לאתר שלך בחודש האחרון.', sub: changeLabel, subClass: changeClass },
+      { label: 'צפיות בעמודים (30 יום)', value: fmt(s.totalPageviews30d), explain: 'כמה עמודים נפתחו בסך הכל (אדם אחד יכול לפתוח כמה עמודים).', sub: '', subClass: '' },
+      { label: 'לחיצות טלפון / וואטסאפ', value: fmt(s.phoneClicks + s.whatsappClicks), explain: 'כמה פעמים לחצו על מספר הטלפון או על כפתור הוואטסאפ באתר.', sub: '', subClass: '' },
+      { label: 'פניות דרך טופס יצירת קשר', value: fmt(s.leads), explain: 'כמה אנשים מילאו את הטופס באתר ונשלחו אליך בוואטסאפ.', sub: '', subClass: '' },
     ];
     document.getElementById('cards').innerHTML = cards.map(function (c) {
       return '<div class="card"><div class="label">' + c.label + '</div><div class="value">' + c.value + '</div>' +
-        (c.sub ? '<div class="sub ' + c.subClass + '">' + c.sub + '</div>' : '') + '</div>';
+        (c.sub ? '<div class="sub ' + c.subClass + '">' + c.sub + '</div>' : '') +
+        '<div class="explain">' + c.explain + '</div></div>';
     }).join('');
 
     var svg = document.getElementById('chart');
@@ -209,27 +233,31 @@
       var x = i * barW;
       var y = 170 - h;
       var day = r.date.slice(6, 8) + '/' + r.date.slice(4, 6);
-      return '<rect class="bar" x="' + (x + 1) + '" y="' + y + '" width="' + Math.max(barW - 2, 1) + '" height="' + h + '"><title>' + day + ': ' + r.sessions + ' כניסות</title></rect>';
+      return '<rect class="bar" x="' + (x + 1) + '" y="' + y + '" width="' + Math.max(barW - 2, 1) + '" height="' + Math.max(h, 1) + '"><title>' + day + ': ' + r.sessions + ' כניסות</title></rect>';
     }).join('');
     svg.innerHTML = bars + '<line x1="0" y1="170" x2="600" y2="170" stroke="#e0d8cc" stroke-width="1"/>';
 
     var tbody = document.querySelector('#pages-table tbody');
     tbody.innerHTML = data.topPageRows.map(function (p) {
-      return '<tr><td>' + p.path + '</td><td class="num">' + fmt(p.views) + '</td></tr>';
+      return '<tr><td>' + pageLabel(p.path) + '</td><td class="num">' + fmt(p.views) + '</td></tr>';
     }).join('') || '<tr><td colspan="2">אין עדיין מספיק נתונים</td></tr>';
 
+    var lowData = s.totalSessions30d < 15;
     var insights = [];
+    if (lowData) {
+      insights.push('המעקב באתר הותקן לאחרונה, ולכן עדיין יש מעט נתונים. ככל שיעברו ימים ותהיה יותר תנועה באתר (בעיקר עם תחילת הקמפיין הממומן), הדשבורד יתמלא בנתונים ותובנות מדויקות יותר.');
+    }
     if (s.topPage) {
-      insights.push('העמוד הכי פופולרי הוא <b>' + s.topPage.path + '</b> עם ' + fmt(s.topPage.views) + ' צפיות ב-30 הימים האחרונים.');
+      insights.push('העמוד הכי פופולרי הוא <b>' + pageLabel(s.topPage.path) + '</b> עם ' + fmt(s.topPage.views) + ' צפיות ב-30 הימים האחרונים.');
     }
     if (s.weekChangePct !== null) {
       insights.push(s.weekChangePct >= 0
         ? 'מספר הכניסות לאתר עלה ב-' + s.weekChangePct + '% בשבוע האחרון לעומת השבוע שלפניו.'
         : 'מספר הכניסות לאתר ירד ב-' + Math.abs(s.weekChangePct) + '% בשבוע האחרון לעומת השבוע שלפניו.');
-    } else {
+    } else if (!lowData) {
       insights.push('עוד אין מספיק נתונים משבועיים קודמים כדי להשוות מגמה.');
     }
-    insights.push('סה"כ ' + fmt(s.leads) + ' פניות ליצירת קשר, ו-' + fmt(s.phoneClicks) + ' לחיצות על מספר הטלפון, ו-' + fmt(s.whatsappClicks) + ' לחיצות על וואטסאפ, ב-30 הימים האחרונים.');
+    insights.push('סה"כ ' + fmt(s.leads) + ' פניות דרך טופס יצירת קשר, ' + fmt(s.phoneClicks) + ' לחיצות על מספר הטלפון, ו-' + fmt(s.whatsappClicks) + ' לחיצות על וואטסאפ, ב-30 הימים האחרונים.');
     document.getElementById('insights-list').innerHTML = insights.map(function (t) { return '<li>' + t + '</li>'; }).join('');
   }
 })();
