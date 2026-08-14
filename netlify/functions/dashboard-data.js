@@ -42,6 +42,25 @@ async function getAccessToken(clientEmail, privateKey) {
   return data.access_token;
 }
 
+const KNOWN_PAGES = [
+  '/',
+  '/about.html',
+  '/expertise.html',
+  '/blog.html',
+  '/leak-detection-thermal-camera.html',
+  '/unclogging-drains.html',
+  '/faucets-toilets-repair.html',
+  '/water-pressure-issues.html',
+  '/renovation-plumbing.html',
+  '/emergency-plumbing.html',
+  '/home-plumbing-inspection.html',
+  '/nezila-nistara-simanim.html',
+  '/stima-kiyor-ambatya.html',
+  '/laghatz-mayim-namuch-sibot.html',
+  '/berez-notef-nyagera-rotza.html',
+  '/bdika-instalatzia-lifney-kniyat-dira.html',
+];
+
 function last30Dates() {
   const dates = [];
   for (let i = 29; i >= 0; i--) {
@@ -86,7 +105,7 @@ exports.handler = async (event) => {
 
     const accessToken = await getAccessToken(clientEmail, privateKey);
 
-    const [daily, topPages, events] = await Promise.all([
+    const [daily, topPages, events, devices, newVsReturning, cities] = await Promise.all([
       runReport(propertyId, accessToken, {
         dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
         dimensions: [{ name: 'date' }],
@@ -102,8 +121,10 @@ exports.handler = async (event) => {
         dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
         dimensions: [{ name: 'pagePath' }],
         metrics: [{ name: 'screenPageViews' }],
-        orderBys: [{ metric: { metricName: 'screenPageViews' }, desc: true }],
-        limit: 10,
+        dimensionFilter: {
+          filter: { fieldName: 'pagePath', inListFilter: { values: KNOWN_PAGES } },
+        },
+        limit: 50,
       }),
       runReport(propertyId, accessToken, {
         dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
@@ -115,6 +136,24 @@ exports.handler = async (event) => {
             inListFilter: { values: ['phone_click', 'whatsapp_click', 'generate_lead'] },
           },
         },
+      }),
+      runReport(propertyId, accessToken, {
+        dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
+        dimensions: [{ name: 'deviceCategory' }],
+        metrics: [{ name: 'activeUsers' }],
+        orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }],
+      }),
+      runReport(propertyId, accessToken, {
+        dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
+        dimensions: [{ name: 'newVsReturning' }],
+        metrics: [{ name: 'activeUsers' }],
+      }),
+      runReport(propertyId, accessToken, {
+        dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
+        dimensions: [{ name: 'city' }],
+        metrics: [{ name: 'activeUsers' }],
+        orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }],
+        limit: 5,
       }),
     ]);
 
@@ -143,15 +182,35 @@ exports.handler = async (event) => {
         ? Math.round(((last7Sessions - prev7Sessions) / prev7Sessions) * 100)
         : null;
 
-    const topPageRows = (topPages.rows || []).map((r) => ({
-      path: r.dimensionValues[0].value,
-      views: Number(r.metricValues[0].value),
-    }));
+    const viewsByPath = {};
+    (topPages.rows || []).forEach((r) => {
+      viewsByPath[r.dimensionValues[0].value] = Number(r.metricValues[0].value);
+    });
+    const topPageRows = KNOWN_PAGES
+      .map((path) => ({ path, views: viewsByPath[path] || 0 }))
+      .sort((a, b) => b.views - a.views);
 
     const eventCounts = {};
     (events.rows || []).forEach((r) => {
       eventCounts[r.dimensionValues[0].value] = Number(r.metricValues[0].value);
     });
+
+    const deviceRows = (devices.rows || []).map((r) => ({
+      device: r.dimensionValues[0].value,
+      users: Number(r.metricValues[0].value),
+    }));
+
+    const newVsReturningRows = (newVsReturning.rows || []).map((r) => ({
+      type: r.dimensionValues[0].value,
+      users: Number(r.metricValues[0].value),
+    }));
+
+    const cityRows = (cities.rows || [])
+      .map((r) => ({
+        city: r.dimensionValues[0].value,
+        users: Number(r.metricValues[0].value),
+      }))
+      .filter((r) => r.city && r.city !== '(not set)');
 
     const summary = {
       totalSessions30d: sum(dailyRows, 'sessions'),
@@ -168,7 +227,12 @@ exports.handler = async (event) => {
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dailyRows, topPageRows, summary }),
+      body: JSON.stringify({
+        dailyRows,
+        topPageRows,
+        summary,
+        audience: { devices: deviceRows, newVsReturning: newVsReturningRows, cities: cityRows },
+      }),
     };
   } catch (err) {
     return {
