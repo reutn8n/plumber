@@ -35,7 +35,7 @@ section{position:relative;}
 }
 .urgent-bar b{color:var(--amber);}
 
-header{background:var(--paper);border-bottom:4px solid var(--navy);position:relative;}
+header{background:var(--paper);border-bottom:4px solid var(--navy);position:relative;z-index:30;}
 .header-inner{display:flex;align-items:center;justify-content:space-between;height:86px;gap:20px;}
 .brand{display:flex;align-items:center;gap:12px;}
 .brand b{display:block;font-family:"Rubik",sans-serif;font-weight:800;font-size:19px;color:var(--navy);}
@@ -271,4 +271,9 @@ a.tip-card:hover{transform:translateY(-3px);box-shadow:0 16px 30px -18px rgba(6,
   .service-blocks{grid-template-columns:1fr 1fr;}
   .compare-grid{grid-template-columns:1fr;}
   .tips-grid{grid-template-columns:1fr 1fr;}
+}
+
+@media (max-width:560px){
+  .tips-grid{grid-template-columns:1fr;}
+  .service-blocks{grid-template-columns:1fr;}
 }
