@@ -23,6 +23,13 @@ function dateStr(date) {
 }
 
 function eventsStore() {
+  if (process.env.SITE_ID && process.env.NETLIFY_FUNCTIONS_TOKEN) {
+    return getStore({
+      name: 'site-events',
+      siteID: process.env.SITE_ID,
+      token: process.env.NETLIFY_FUNCTIONS_TOKEN,
+    });
+  }
   return getStore('site-events');
 }
 
