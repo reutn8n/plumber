@@ -48,5 +48,5 @@ exports.handler = async (event) => {
 
   await sendTelegram(reply).catch(() => {});
 
-  return { statusCode: 200, body: 'ok' };
+  return { statusCode: 200, body: JSON.stringify({ reply }) };
 };
