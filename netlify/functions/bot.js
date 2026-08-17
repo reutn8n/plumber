@@ -43,7 +43,7 @@ exports.handler = async (event) => {
       reply = await buildSummaryText(1, '📊 סטטוס — היום');
     }
   } catch (err) {
-    reply = 'הייתה שגיאה בשליפת הנתונים, נסי שוב בעוד רגע.';
+    reply = 'הייתה שגיאה בשליפת הנתונים: ' + err.message;
   }
 
   await sendTelegram(reply).catch(() => {});
