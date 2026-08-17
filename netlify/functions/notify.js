@@ -1,5 +1,5 @@
 const { sendTelegram } = require('./lib/telegram');
-const { recordEvent, isBot } = require('./lib/store');
+const { recordEvent, isBot, getGeo } = require('./lib/store');
 
 const LABELS = {
   phone_click: '📞 לחיצה על מספר הטלפון',
@@ -27,7 +27,7 @@ exports.handler = async (event) => {
 
   const userAgent = event.headers['user-agent'] || '';
   if (!isBot(userAgent)) {
-    const city = (event.headers['x-nf-geo'] && JSON.parse(event.headers['x-nf-geo']).city) || null;
+    const { city } = getGeo(event.headers);
     await recordEvent(type, { path: page || null, name: name || null, phone: phone || null, city }).catch(() => {});
   }
 

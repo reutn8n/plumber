@@ -6,6 +6,17 @@ function isBot(userAgent) {
   return !userAgent || BOT_UA_PATTERN.test(userAgent);
 }
 
+function getGeo(headers) {
+  try {
+    const raw = headers['x-nf-geo'];
+    if (!raw) return { city: null, country: null };
+    const geo = JSON.parse(Buffer.from(raw, 'base64').toString('utf-8'));
+    return { city: geo.city || null, country: (geo.country && geo.country.code) || null };
+  } catch {
+    return { city: null, country: null };
+  }
+}
+
 function dateStr(date) {
   const d = date || new Date();
   return d.toISOString().slice(0, 10); // YYYY-MM-DD
@@ -50,4 +61,4 @@ async function getEventsInLastNDays(type, days) {
   return { dates, eventsByDate: Object.fromEntries(dates.map((d, i) => [d, perDay[i]])) };
 }
 
-module.exports = { isBot, dateStr, recordEvent, getEvents, getEventsInLastNDays };
+module.exports = { isBot, getGeo, dateStr, recordEvent, getEvents, getEventsInLastNDays };

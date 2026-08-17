@@ -1,4 +1,4 @@
-const { recordEvent, isBot } = require('./lib/store');
+const { recordEvent, isBot, getGeo } = require('./lib/store');
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
@@ -22,15 +22,7 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: 'Missing path' };
   }
 
-  let city = null;
-  let country = null;
-  try {
-    const geo = event.headers['x-nf-geo'] && JSON.parse(event.headers['x-nf-geo']);
-    if (geo) {
-      city = geo.city || null;
-      country = (geo.country && geo.country.code) || null;
-    }
-  } catch {}
+  const { city, country } = getGeo(event.headers);
 
   await recordEvent('pageview', {
     path,
