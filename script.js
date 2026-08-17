@@ -1,12 +1,25 @@
+function notify(type, extra) {
+  try {
+    fetch('/.netlify/functions/notify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({ type: type, page: location.pathname }, extra)),
+      keepalive: true,
+    }).catch(function () {});
+  } catch (err) {}
+}
+
 document.addEventListener('click', function (e) {
   var link = e.target.closest('a');
-  if (!link || typeof gtag !== 'function') return;
+  if (!link) return;
 
   var href = link.getAttribute('href') || '';
   if (href.indexOf('tel:') === 0) {
-    gtag('event', 'phone_click', { link_url: href });
+    if (typeof gtag === 'function') gtag('event', 'phone_click', { link_url: href });
+    notify('phone_click');
   } else if (href.indexOf('wa.me') !== -1 || href.indexOf('api.whatsapp.com') !== -1) {
-    gtag('event', 'whatsapp_click', { link_url: href });
+    if (typeof gtag === 'function') gtag('event', 'whatsapp_click', { link_url: href });
+    notify('whatsapp_click');
   }
 });
 
@@ -51,6 +64,7 @@ if (leadForm) {
     if (typeof gtag === 'function') {
       gtag('event', 'generate_lead', { method: 'contact_form' });
     }
+    notify('generate_lead', { name: name, phone: phone, issue: issue });
 
     window.open(url, '_blank', 'noopener');
   });

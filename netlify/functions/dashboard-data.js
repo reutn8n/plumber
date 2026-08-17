@@ -1,46 +1,4 @@
-const crypto = require('crypto');
-
-const TOKEN_URL = 'https://oauth2.googleapis.com/token';
-const SCOPE = 'https://www.googleapis.com/auth/analytics.readonly';
-
-function base64url(input) {
-  return Buffer.from(input)
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
-}
-
-async function getAccessToken(clientEmail, privateKey) {
-  const now = Math.floor(Date.now() / 1000);
-  const header = { alg: 'RS256', typ: 'JWT' };
-  const payload = {
-    iss: clientEmail,
-    scope: SCOPE,
-    aud: TOKEN_URL,
-    exp: now + 3600,
-    iat: now,
-  };
-
-  const signingInput = `${base64url(JSON.stringify(header))}.${base64url(JSON.stringify(payload))}`;
-  const signature = crypto.createSign('RSA-SHA256').update(signingInput).sign(privateKey);
-  const jwt = `${signingInput}.${signature.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')}`;
-
-  const res = await fetch(TOKEN_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-      assertion: jwt,
-    }),
-  });
-
-  if (!res.ok) {
-    throw new Error(`Token request failed: ${res.status} ${await res.text()}`);
-  }
-  const data = await res.json();
-  return data.access_token;
-}
+const { getGa4Client } = require('./lib/ga4');
 
 const KNOWN_PAGES = [
   '/',
@@ -74,24 +32,6 @@ function last30Dates() {
   return dates;
 }
 
-async function runReport(propertyId, accessToken, body) {
-  const res = await fetch(
-    `https://analyticsdata.googleapis.com/v1beta/properties/${propertyId}:runReport`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    }
-  );
-  if (!res.ok) {
-    throw new Error(`GA4 report failed: ${res.status} ${await res.text()}`);
-  }
-  return res.json();
-}
-
 exports.handler = async (event) => {
   const password = event.headers['x-dashboard-password'];
   if (!password || password !== process.env.DASHBOARD_PASSWORD) {
@@ -99,14 +39,10 @@ exports.handler = async (event) => {
   }
 
   try {
-    const clientEmail = process.env.GA_CLIENT_EMAIL;
-    const privateKey = process.env.GA_PRIVATE_KEY.replace(/\\n/g, '\n');
-    const propertyId = process.env.GA_PROPERTY_ID;
-
-    const accessToken = await getAccessToken(clientEmail, privateKey);
+    const { runReport } = await getGa4Client();
 
     const [daily, topPages, events, devices, newVsReturning, cities] = await Promise.all([
-      runReport(propertyId, accessToken, {
+      runReport({
         dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
         dimensions: [{ name: 'date' }],
         metrics: [
@@ -117,7 +53,7 @@ exports.handler = async (event) => {
         orderBys: [{ dimension: { dimensionName: 'date' } }],
         keepEmptyRows: true,
       }),
-      runReport(propertyId, accessToken, {
+      runReport({
         dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
         dimensions: [{ name: 'pagePath' }],
         metrics: [{ name: 'screenPageViews' }],
@@ -126,7 +62,7 @@ exports.handler = async (event) => {
         },
         limit: 50,
       }),
-      runReport(propertyId, accessToken, {
+      runReport({
         dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
         dimensions: [{ name: 'eventName' }],
         metrics: [{ name: 'eventCount' }],
@@ -137,18 +73,18 @@ exports.handler = async (event) => {
           },
         },
       }),
-      runReport(propertyId, accessToken, {
+      runReport({
         dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
         dimensions: [{ name: 'deviceCategory' }],
         metrics: [{ name: 'activeUsers' }],
         orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }],
       }),
-      runReport(propertyId, accessToken, {
+      runReport({
         dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
         dimensions: [{ name: 'newVsReturning' }],
         metrics: [{ name: 'activeUsers' }],
       }),
-      runReport(propertyId, accessToken, {
+      runReport({
         dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
         dimensions: [{ name: 'city' }],
         metrics: [{ name: 'activeUsers' }],
