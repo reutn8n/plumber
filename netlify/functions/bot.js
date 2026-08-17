@@ -32,6 +32,19 @@ exports.handler = async (event) => {
   const text = message.text.trim();
   let reply;
 
+  if (text === 'debug-env') {
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        SITE_ID: process.env.SITE_ID || null,
+        NETLIFY_SITE_ID: process.env.NETLIFY_SITE_ID || null,
+        hasBlobsContext: !!process.env.NETLIFY_BLOBS_CONTEXT,
+        blobsContextLen: (process.env.NETLIFY_BLOBS_CONTEXT || '').length,
+        keys: Object.keys(process.env).filter((k) => /netlify|site|blob/i.test(k)),
+      }),
+    };
+  }
+
   try {
     if (/^\/start/.test(text)) {
       reply = HELP;
