@@ -1,63 +1,44 @@
-const { getGa4Client, sendTelegram, pageLabel } = require('./lib/ga4');
+const { sendTelegram } = require('./lib/telegram');
+const { getEvents, dateStr } = require('./lib/store');
+const { pageLabel } = require('./lib/pages');
 
 exports.handler = async () => {
   try {
-    const { runReport } = await getGa4Client();
+    const today = dateStr(new Date());
 
-    const [totals, topPages, events] = await Promise.all([
-      runReport({
-        dateRanges: [{ startDate: 'today', endDate: 'today' }],
-        metrics: [{ name: 'sessions' }, { name: 'activeUsers' }, { name: 'screenPageViews' }],
-      }),
-      runReport({
-        dateRanges: [{ startDate: 'today', endDate: 'today' }],
-        dimensions: [{ name: 'pagePath' }],
-        metrics: [{ name: 'screenPageViews' }],
-        orderBys: [{ metric: { metricName: 'screenPageViews' }, desc: true }],
-        limit: 3,
-      }),
-      runReport({
-        dateRanges: [{ startDate: 'today', endDate: 'today' }],
-        dimensions: [{ name: 'eventName' }],
-        metrics: [{ name: 'eventCount' }],
-        dimensionFilter: {
-          filter: {
-            fieldName: 'eventName',
-            inListFilter: { values: ['phone_click', 'whatsapp_click', 'generate_lead'] },
-          },
-        },
-      }),
+    const [pageviews, phoneEvents, waEvents, leadEvents] = await Promise.all([
+      getEvents('pageview', today),
+      getEvents('phone_click', today),
+      getEvents('whatsapp_click', today),
+      getEvents('generate_lead', today),
     ]);
 
-    const totalsRow = (totals.rows && totals.rows[0]) || null;
-    const sessions = totalsRow ? Number(totalsRow.metricValues[0].value) : 0;
-    const users = totalsRow ? Number(totalsRow.metricValues[1].value) : 0;
-    const pageviews = totalsRow ? Number(totalsRow.metricValues[2].value) : 0;
+    const sids = new Set(pageviews.map((e) => e.sid).filter(Boolean));
 
-    const eventCounts = {};
-    (events.rows || []).forEach((r) => {
-      eventCounts[r.dimensionValues[0].value] = Number(r.metricValues[0].value);
+    const viewsByPath = {};
+    pageviews.forEach((e) => {
+      viewsByPath[e.path] = (viewsByPath[e.path] || 0) + 1;
     });
+    const topPages = Object.entries(viewsByPath)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3);
 
-    const topPageLines = (topPages.rows || [])
-      .map((r) => `  • ${pageLabel(r.dimensionValues[0].value)} — ${r.metricValues[0].value} צפיות`)
-      .join('\n');
+    const topPageLines = topPages.map(([path, views]) => `  • ${pageLabel(path)} — ${views} צפיות`).join('\n');
 
     const dateLabel = new Date().toLocaleDateString('he-IL', { timeZone: 'Asia/Jerusalem' });
 
     const lines = [
       `📊 סיכום יומי — ${dateLabel}`,
       '',
-      `כניסות לאתר: ${sessions}`,
-      `מבקרים: ${users}`,
-      `צפיות בעמודים: ${pageviews}`,
+      `כניסות לאתר: ${sids.size}`,
+      `צפיות בעמודים: ${pageviews.length}`,
       '',
       'העמודים הפופולריים היום:',
       topPageLines || '  אין עדיין נתונים',
       '',
-      `📞 לחיצות טלפון: ${eventCounts.phone_click || 0}`,
-      `💬 לחיצות וואטסאפ: ${eventCounts.whatsapp_click || 0}`,
-      `✅ לידים מהטופס: ${eventCounts.generate_lead || 0}`,
+      `📞 לחיצות טלפון: ${phoneEvents.length}`,
+      `💬 לחיצות וואטסאפ: ${waEvents.length}`,
+      `✅ לידים מהטופס: ${leadEvents.length}`,
     ];
 
     await sendTelegram(lines.join('\n'));

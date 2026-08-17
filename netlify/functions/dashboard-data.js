@@ -1,35 +1,8 @@
-const { getGa4Client } = require('./lib/ga4');
+const { getEventsInLastNDays } = require('./lib/store');
+const { KNOWN_PAGES } = require('./lib/pages');
 
-const KNOWN_PAGES = [
-  '/',
-  '/about.html',
-  '/expertise.html',
-  '/blog.html',
-  '/leak-detection-thermal-camera.html',
-  '/unclogging-drains.html',
-  '/faucets-toilets-repair.html',
-  '/water-pressure-issues.html',
-  '/renovation-plumbing.html',
-  '/emergency-plumbing.html',
-  '/home-plumbing-inspection.html',
-  '/nezila-nistara-simanim.html',
-  '/stima-kiyor-ambatya.html',
-  '/laghatz-mayim-namuch-sibot.html',
-  '/berez-notef-nyagera-rotza.html',
-  '/bdika-instalatzia-lifney-kniyat-dira.html',
-];
-
-function last30Dates() {
-  const dates = [];
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    dates.push(`${y}${m}${day}`);
-  }
-  return dates;
+function toChartDate(isoDate) {
+  return isoDate.replace(/-/g, '');
 }
 
 exports.handler = async (event) => {
@@ -39,74 +12,26 @@ exports.handler = async (event) => {
   }
 
   try {
-    const { runReport } = await getGa4Client();
-
-    const [daily, topPages, events, devices, newVsReturning, cities] = await Promise.all([
-      runReport({
-        dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
-        dimensions: [{ name: 'date' }],
-        metrics: [
-          { name: 'sessions' },
-          { name: 'activeUsers' },
-          { name: 'screenPageViews' },
-        ],
-        orderBys: [{ dimension: { dimensionName: 'date' } }],
-        keepEmptyRows: true,
-      }),
-      runReport({
-        dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
-        dimensions: [{ name: 'pagePath' }],
-        metrics: [{ name: 'screenPageViews' }],
-        dimensionFilter: {
-          filter: { fieldName: 'pagePath', inListFilter: { values: KNOWN_PAGES } },
-        },
-        limit: 50,
-      }),
-      runReport({
-        dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
-        dimensions: [{ name: 'eventName' }],
-        metrics: [{ name: 'eventCount' }],
-        dimensionFilter: {
-          filter: {
-            fieldName: 'eventName',
-            inListFilter: { values: ['phone_click', 'whatsapp_click', 'generate_lead'] },
-          },
-        },
-      }),
-      runReport({
-        dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
-        dimensions: [{ name: 'deviceCategory' }],
-        metrics: [{ name: 'activeUsers' }],
-        orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }],
-      }),
-      runReport({
-        dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
-        dimensions: [{ name: 'newVsReturning' }],
-        metrics: [{ name: 'activeUsers' }],
-      }),
-      runReport({
-        dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
-        dimensions: [{ name: 'city' }],
-        metrics: [{ name: 'activeUsers' }],
-        orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }],
-        limit: 5,
-      }),
+    const [pageviewData, phoneData, waData, leadData] = await Promise.all([
+      getEventsInLastNDays('pageview', 30),
+      getEventsInLastNDays('phone_click', 30),
+      getEventsInLastNDays('whatsapp_click', 30),
+      getEventsInLastNDays('generate_lead', 30),
     ]);
 
-    const rowsByDate = {};
-    (daily.rows || []).forEach((r) => {
-      rowsByDate[r.dimensionValues[0].value] = {
-        sessions: Number(r.metricValues[0].value),
-        users: Number(r.metricValues[1].value),
-        pageviews: Number(r.metricValues[2].value),
+    const { dates, eventsByDate } = pageviewData;
+    const allPageviews = dates.flatMap((d) => eventsByDate[d]);
+
+    const dailyRows = dates.map((date) => {
+      const dayEvents = eventsByDate[date];
+      const sids = new Set(dayEvents.map((e) => e.sid).filter(Boolean));
+      return {
+        date: toChartDate(date),
+        sessions: sids.size,
+        users: sids.size,
+        pageviews: dayEvents.length,
       };
     });
-    const dailyRows = last30Dates().map((date) => ({
-      date,
-      sessions: (rowsByDate[date] && rowsByDate[date].sessions) || 0,
-      users: (rowsByDate[date] && rowsByDate[date].users) || 0,
-      pageviews: (rowsByDate[date] && rowsByDate[date].pageviews) || 0,
-    }));
 
     const last7 = dailyRows.slice(-7);
     const prev7 = dailyRows.slice(-14, -7);
@@ -119,34 +44,43 @@ exports.handler = async (event) => {
         : null;
 
     const viewsByPath = {};
-    (topPages.rows || []).forEach((r) => {
-      viewsByPath[r.dimensionValues[0].value] = Number(r.metricValues[0].value);
+    allPageviews.forEach((e) => {
+      viewsByPath[e.path] = (viewsByPath[e.path] || 0) + 1;
     });
     const topPageRows = KNOWN_PAGES
       .map((path) => ({ path, views: viewsByPath[path] || 0 }))
       .sort((a, b) => b.views - a.views);
 
-    const eventCounts = {};
-    (events.rows || []).forEach((r) => {
-      eventCounts[r.dimensionValues[0].value] = Number(r.metricValues[0].value);
+    const sessionMap = {};
+    allPageviews.forEach((e) => {
+      if (e.sid && !sessionMap[e.sid]) sessionMap[e.sid] = e;
     });
+    const sessions = Object.values(sessionMap);
 
-    const deviceRows = (devices.rows || []).map((r) => ({
-      device: r.dimensionValues[0].value,
-      users: Number(r.metricValues[0].value),
-    }));
+    const deviceCounts = {};
+    sessions.forEach((s) => {
+      deviceCounts[s.device] = (deviceCounts[s.device] || 0) + 1;
+    });
+    const deviceRows = Object.entries(deviceCounts)
+      .map(([device, users]) => ({ device, users }))
+      .sort((a, b) => b.users - a.users);
 
-    const newVsReturningRows = (newVsReturning.rows || []).map((r) => ({
-      type: r.dimensionValues[0].value,
-      users: Number(r.metricValues[0].value),
-    }));
+    const newCount = sessions.filter((s) => s.isNew).length;
+    const newVsReturningRows = [
+      { type: 'new', users: newCount },
+      { type: 'returning', users: sessions.length - newCount },
+    ];
 
-    const cityRows = (cities.rows || [])
-      .map((r) => ({
-        city: r.dimensionValues[0].value,
-        users: Number(r.metricValues[0].value),
-      }))
-      .filter((r) => r.city && r.city !== '(not set)');
+    const cityCounts = {};
+    sessions.forEach((s) => {
+      if (s.city) cityCounts[s.city] = (cityCounts[s.city] || 0) + 1;
+    });
+    const cityRows = Object.entries(cityCounts)
+      .map(([city, users]) => ({ city, users }))
+      .sort((a, b) => b.users - a.users)
+      .slice(0, 5);
+
+    const countAll = (data) => dates.reduce((total, d) => total + data.eventsByDate[d].length, 0);
 
     const summary = {
       totalSessions30d: sum(dailyRows, 'sessions'),
@@ -154,10 +88,10 @@ exports.handler = async (event) => {
       last7Sessions,
       prev7Sessions,
       weekChangePct,
-      topPage: topPageRows[0] || null,
-      phoneClicks: eventCounts.phone_click || 0,
-      whatsappClicks: eventCounts.whatsapp_click || 0,
-      leads: eventCounts.generate_lead || 0,
+      topPage: topPageRows[0] && topPageRows[0].views > 0 ? topPageRows[0] : null,
+      phoneClicks: countAll(phoneData),
+      whatsappClicks: countAll(waData),
+      leads: countAll(leadData),
     };
 
     return {

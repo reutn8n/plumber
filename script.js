@@ -1,3 +1,31 @@
+(function trackPageview() {
+  try {
+    var sid = sessionStorage.getItem('sid');
+    if (!sid) {
+      sid = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+      sessionStorage.setItem('sid', sid);
+    }
+    var isNew = !localStorage.getItem('visited');
+    if (isNew) localStorage.setItem('visited', '1');
+
+    var w = window.innerWidth;
+    var device = w < 700 ? 'mobile' : w < 960 ? 'tablet' : 'desktop';
+
+    fetch('/.netlify/functions/track', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        path: location.pathname,
+        referrer: document.referrer || null,
+        device: device,
+        isNew: isNew,
+        sid: sid,
+      }),
+      keepalive: true,
+    }).catch(function () {});
+  } catch (err) {}
+})();
+
 function notify(type, extra) {
   try {
     fetch('/.netlify/functions/notify', {
