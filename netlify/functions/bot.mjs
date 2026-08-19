@@ -1,5 +1,5 @@
-const { sendTelegram } = require('./lib/telegram');
-const { buildSummaryText } = require('./lib/reports');
+import { sendTelegram } from './lib/telegram.mjs';
+import { buildSummaryText } from './lib/reports.mjs';
 
 const HELP = [
   'היי! אפשר לשאול אותי בכל שעה:',
@@ -8,42 +8,29 @@ const HELP = [
   '• "החודש" — 30 הימים האחרונים',
 ].join('\n');
 
-exports.handler = async (event) => {
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 200, body: 'ok' };
+export default async (req) => {
+  if (req.method !== 'POST') {
+    return new Response('ok');
   }
 
   let update;
   try {
-    update = JSON.parse(event.body || '{}');
+    update = await req.json();
   } catch {
-    return { statusCode: 200, body: 'ok' };
+    return new Response('ok');
   }
 
   const message = update.message;
   if (!message || !message.text || !message.chat) {
-    return { statusCode: 200, body: 'ok' };
+    return new Response('ok');
   }
 
   if (String(message.chat.id) !== process.env.TELEGRAM_CHAT_ID) {
-    return { statusCode: 200, body: 'ok' };
+    return new Response('ok');
   }
 
   const text = message.text.trim();
   let reply;
-
-  if (text === 'debug-env') {
-    return {
-      statusCode: 200,
-      body: JSON.stringify({
-        SITE_ID: process.env.SITE_ID || null,
-        NETLIFY_SITE_ID: process.env.NETLIFY_SITE_ID || null,
-        hasBlobsContext: !!process.env.NETLIFY_BLOBS_CONTEXT,
-        blobsContextLen: (process.env.NETLIFY_BLOBS_CONTEXT || '').length,
-        keys: Object.keys(process.env).filter((k) => /netlify|site|blob/i.test(k)),
-      }),
-    };
-  }
 
   try {
     if (/^\/start/.test(text)) {
@@ -55,11 +42,11 @@ exports.handler = async (event) => {
     } else {
       reply = await buildSummaryText(1, '📊 סטטוס — היום');
     }
-  } catch (err) {
-    reply = 'הייתה שגיאה בשליפת הנתונים: ' + err.message;
+  } catch {
+    reply = 'הייתה שגיאה בשליפת הנתונים, נסי שוב בעוד רגע.';
   }
 
   await sendTelegram(reply).catch(() => {});
 
-  return { statusCode: 200, body: JSON.stringify({ reply }) };
+  return new Response('ok');
 };

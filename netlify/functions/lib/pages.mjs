@@ -1,4 +1,4 @@
-const PAGE_LABELS = {
+export const PAGE_LABELS = {
   '/': 'עמוד הבית',
   '/about.html': 'אודות יאיר',
   '/expertise.html': 'מומחיות ופרויקטים',
@@ -17,10 +17,8 @@ const PAGE_LABELS = {
   '/bdika-instalatzia-lifney-kniyat-dira.html': 'מאמר: בדיקת אינסטלציה לפני קניית דירה',
 };
 
-const KNOWN_PAGES = Object.keys(PAGE_LABELS);
+export const KNOWN_PAGES = Object.keys(PAGE_LABELS);
 
-function pageLabel(path) {
+export function pageLabel(path) {
   return PAGE_LABELS[path] || path;
 }
-
-module.exports = { PAGE_LABELS, KNOWN_PAGES, pageLabel };

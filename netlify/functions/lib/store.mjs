@@ -1,14 +1,14 @@
-const { getStore } = require('@netlify/blobs');
+import { getStore } from '@netlify/blobs';
 
 const BOT_UA_PATTERN = /bot|crawler|spider|slurp|mediapartners|headlesschrome|python-requests|curl|wget|scrapy|facebookexternalhit|petalbot|bytespider|gptbot|ccbot|semrushbot|ahrefsbot|mj12bot|dotbot|applebot/i;
 
-function isBot(userAgent) {
+export function isBot(userAgent) {
   return !userAgent || BOT_UA_PATTERN.test(userAgent);
 }
 
-function getGeo(headers) {
+export function getGeo(headers) {
   try {
-    const raw = headers['x-nf-geo'];
+    const raw = headers.get('x-nf-geo');
     if (!raw) return { city: null, country: null };
     const geo = JSON.parse(Buffer.from(raw, 'base64').toString('utf-8'));
     return { city: geo.city || null, country: (geo.country && geo.country.code) || null };
@@ -17,23 +17,16 @@ function getGeo(headers) {
   }
 }
 
-function dateStr(date) {
+export function dateStr(date) {
   const d = date || new Date();
   return d.toISOString().slice(0, 10); // YYYY-MM-DD
 }
 
 function eventsStore() {
-  if (process.env.SITE_ID && process.env.NETLIFY_BLOBS_TOKEN) {
-    return getStore({
-      name: 'site-events',
-      siteID: process.env.SITE_ID,
-      token: process.env.NETLIFY_BLOBS_TOKEN,
-    });
-  }
   return getStore('site-events');
 }
 
-async function recordEvent(type, data) {
+export async function recordEvent(type, data) {
   const store = eventsStore();
   const ts = Date.now();
   const rand = Math.random().toString(36).slice(2, 8);
@@ -43,21 +36,15 @@ async function recordEvent(type, data) {
   return key;
 }
 
-async function listEventKeys(type, dayPrefix) {
+export async function getEvents(type, dayPrefix) {
   const store = eventsStore();
   const prefix = dayPrefix ? `${type}/${dayPrefix}/` : `${type}/`;
   const { blobs } = await store.list({ prefix });
-  return blobs.map((b) => b.key);
-}
-
-async function getEvents(type, dayPrefix) {
-  const store = eventsStore();
-  const keys = await listEventKeys(type, dayPrefix);
-  const events = await Promise.all(keys.map((key) => store.get(key, { type: 'json' })));
+  const events = await Promise.all(blobs.map((b) => store.get(b.key, { type: 'json' })));
   return events.filter(Boolean);
 }
 
-async function getEventsInLastNDays(type, days) {
+export async function getEventsInLastNDays(type, days) {
   const dates = [];
   for (let i = days - 1; i >= 0; i--) {
     const d = new Date();
@@ -67,5 +54,3 @@ async function getEventsInLastNDays(type, days) {
   const perDay = await Promise.all(dates.map((day) => getEvents(type, day)));
   return { dates, eventsByDate: Object.fromEntries(dates.map((d, i) => [d, perDay[i]])) };
 }
-
-module.exports = { isBot, getGeo, dateStr, recordEvent, getEvents, getEventsInLastNDays };

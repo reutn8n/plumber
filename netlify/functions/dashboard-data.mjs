@@ -1,14 +1,17 @@
-const { getEventsInLastNDays } = require('./lib/store');
-const { KNOWN_PAGES } = require('./lib/pages');
+import { getEventsInLastNDays } from './lib/store.mjs';
+import { KNOWN_PAGES } from './lib/pages.mjs';
 
 function toChartDate(isoDate) {
   return isoDate.replace(/-/g, '');
 }
 
-exports.handler = async (event) => {
-  const password = event.headers['x-dashboard-password'];
+export default async (req) => {
+  const password = req.headers.get('x-dashboard-password');
   if (!password || password !== process.env.DASHBOARD_PASSWORD) {
-    return { statusCode: 401, body: JSON.stringify({ error: 'unauthorized' }) };
+    return new Response(JSON.stringify({ error: 'unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
   try {
@@ -94,20 +97,19 @@ exports.handler = async (event) => {
       leads: countAll(leadData),
     };
 
-    return {
-      statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    return new Response(
+      JSON.stringify({
         dailyRows,
         topPageRows,
         summary,
         audience: { devices: deviceRows, newVsReturning: newVsReturningRows, cities: cityRows },
       }),
-    };
+      { headers: { 'Content-Type': 'application/json' } }
+    );
   } catch (err) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'server_error', message: err.message }),
-    };
+    return new Response(JSON.stringify({ error: 'server_error', message: err.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 };

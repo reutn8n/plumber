@@ -1,5 +1,5 @@
-const { getEvents, getEventsInLastNDays, dateStr } = require('./store');
-const { pageLabel } = require('./pages');
+import { getEvents, getEventsInLastNDays, dateStr } from './store.mjs';
+import { pageLabel } from './pages.mjs';
 
 async function collect(days) {
   if (days === 1) {
@@ -28,7 +28,7 @@ async function collect(days) {
   };
 }
 
-async function buildSummaryText(days, title) {
+export async function buildSummaryText(days, title) {
   const { pageviews, phoneEvents, waEvents, leadEvents } = await collect(days);
 
   const sids = new Set(pageviews.map((e) => e.sid).filter(Boolean));
@@ -54,5 +54,3 @@ async function buildSummaryText(days, title) {
     `📞 טלפון: ${phoneEvents.length}   💬 וואטסאפ: ${waEvents.length}   ✅ לידים: ${leadEvents.length}`,
   ].join('\n');
 }
-
-module.exports = { buildSummaryText };
