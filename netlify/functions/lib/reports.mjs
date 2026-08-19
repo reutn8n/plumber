@@ -28,6 +28,46 @@ async function collect(days) {
   };
 }
 
+function formatWhen(ts) {
+  return new Date(ts).toLocaleString('he-IL', {
+    timeZone: 'Asia/Jerusalem',
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+export async function buildLeadsText(days) {
+  const { leadEvents, phoneEvents, waEvents } = await collect(days);
+
+  const period = days === 1 ? 'היום' : `${days} הימים האחרונים`;
+  const lines = [`👥 פניות לקוחות — ${period}`, ''];
+
+  if (leadEvents.length) {
+    lines.push(`📋 מהטופס באתר (${leadEvents.length}):`);
+    leadEvents
+      .slice()
+      .sort((a, b) => b.ts - a.ts)
+      .forEach((e) => {
+        lines.push('');
+        lines.push(`• ${e.name || 'ללא שם'} — ${e.phone || 'ללא טלפון'}`);
+        if (e.issue) lines.push(`  תיאור: ${e.issue}`);
+        lines.push(`  ${formatWhen(e.ts)}${e.city ? ' · ' + e.city : ''}`);
+      });
+  } else {
+    lines.push('📋 מהטופס באתר: אין פניות בתקופה הזו');
+  }
+
+  lines.push('');
+  lines.push(
+    `📞 לחצו על הטלפון: ${phoneEvents.length}   💬 לחצו על וואטסאפ: ${waEvents.length}`
+  );
+  lines.push('(בלחיצות האלה אין פרטים אישיים — הלקוח פונה ישירות, בלי להשאיר פרטים באתר)');
+
+  return lines.join('\n');
+}
+
 export async function buildSummaryText(days, title) {
   const { pageviews, phoneEvents, waEvents, leadEvents } = await collect(days);
 

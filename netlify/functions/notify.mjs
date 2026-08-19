@@ -31,6 +31,7 @@ export default async (req) => {
       path: page || null,
       name: name || null,
       phone: phone || null,
+      issue: issue || null,
       city,
     }).catch(() => {});
   }

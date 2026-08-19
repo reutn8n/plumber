@@ -1,12 +1,24 @@
 import { sendTelegram } from './lib/telegram.mjs';
-import { buildSummaryText } from './lib/reports.mjs';
+import { buildSummaryText, buildLeadsText } from './lib/reports.mjs';
 
 const HELP = [
   'היי! אפשר לשאול אותי בכל שעה:',
-  '• "היום" / "סטטוס" / "מה קורה" — סיכום היום',
+  '',
+  '📊 נתוני תנועה:',
+  '• "היום" — סיכום היום',
   '• "השבוע" — 7 הימים האחרונים',
   '• "החודש" — 30 הימים האחרונים',
+  '',
+  '👥 פרטי לקוחות:',
+  '• "לידים" — פניות של היום עם שם וטלפון',
+  '• "לידים השבוע" / "לידים החודש" — לתקופה ארוכה יותר',
 ].join('\n');
+
+function periodFrom(text) {
+  if (/חודש|30/.test(text)) return { days: 30, label: '30 הימים האחרונים' };
+  if (/שבוע|7/.test(text)) return { days: 7, label: '7 הימים האחרונים' };
+  return { days: 1, label: 'היום' };
+}
 
 export default async (req) => {
   if (req.method !== 'POST') {
@@ -33,14 +45,13 @@ export default async (req) => {
   let reply;
 
   try {
-    if (/^\/start/.test(text)) {
+    if (/^\/start|עזרה|מה אתה יודע|פקודות/.test(text)) {
       reply = HELP;
-    } else if (/חודש|30/.test(text)) {
-      reply = await buildSummaryText(30, '📊 סטטוס — 30 הימים האחרונים');
-    } else if (/שבוע|7/.test(text)) {
-      reply = await buildSummaryText(7, '📊 סטטוס — 7 הימים האחרונים');
+    } else if (/ליד|לקוח|פני[יו]|טופס|פרטים/.test(text)) {
+      reply = await buildLeadsText(periodFrom(text).days);
     } else {
-      reply = await buildSummaryText(1, '📊 סטטוס — היום');
+      const { days, label } = periodFrom(text);
+      reply = await buildSummaryText(days, `📊 סטטוס — ${label}`);
     }
   } catch {
     reply = 'הייתה שגיאה בשליפת הנתונים, נסי שוב בעוד רגע.';
