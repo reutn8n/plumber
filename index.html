@@ -71,10 +71,15 @@
   "aggregateRating": {
     "@type": "AggregateRating",
     "ratingValue": "5.0",
-    "reviewCount": "1",
+    "reviewCount": "2",
     "bestRating": "5"
   },
   "review": [{
+    "@type": "Review",
+    "reviewRating": {"@type": "Rating", "ratingValue": "5"},
+    "author": {"@type": "Person", "name": "Mazal Zipani"},
+    "reviewBody": "יאיר הגיע ממש מהר, טיפל בבעיה, עבד זמן רב עם סבלנות והסביר על יד סרט וידאו את הכל. אז יאיר המון תודה לך."
+  },{
     "@type": "Review",
     "reviewRating": {"@type": "Rating", "ratingValue": "5"},
     "author": {"@type": "Person", "name": "דור גבאי"},
@@ -161,8 +166,13 @@
   .field textarea{resize:vertical;min-height:80px;}
   .lead-card .btn{width:100%;justify-content:center;}
 
+  .reviews-grid{
+    display:grid;grid-template-columns:repeat(2,1fr);gap:20px;
+    max-width:900px;margin:0 auto;align-items:start;
+  }
+  @media (max-width:760px){.reviews-grid{grid-template-columns:1fr;max-width:560px;}}
   .review-card{
-    max-width:560px;margin:0 auto;background:#fff;border:1px solid var(--line);border-radius:18px;
+    background:#fff;border:1px solid var(--line);border-radius:18px;
     padding:30px 32px;text-align:right;box-shadow:0 20px 40px -28px rgba(6,33,58,.25);
   }
   .review-card .review-stars{color:var(--amber);font-size:20px;letter-spacing:3px;margin-bottom:14px;}
@@ -284,12 +294,22 @@
       <span class="tag">חוות דעת</span>
       <h2>לקוחות מספרים</h2>
     </div>
-    <div class="review-card">
-      <div class="review-stars" aria-hidden="true">★★★★★</div>
-      <p class="review-body">יאיר הגיע אלינו באופן מיידי, ביום שישי. איתר את הנזילה, וייעץ לגבי אופן הטיפול בתשתית ספרינקלרים של הבניין. מחיר הוגן לגמרי. מקצועי ואדיב מאוד.</p>
-      <div class="review-author">
-        <span class="avatar" aria-hidden="true">ד.ג</span>
-        <div><b>דור גבאי</b><span>Google Business Profile</span></div>
+    <div class="reviews-grid">
+      <div class="review-card">
+        <div class="review-stars" aria-hidden="true">★★★★★</div>
+        <p class="review-body">יאיר הגיע ממש מהר, טיפל בבעיה, עבד זמן רב עם סבלנות והסביר על יד סרט וידאו את הכל. אז יאיר המון תודה לך.</p>
+        <div class="review-author">
+          <span class="avatar" aria-hidden="true">מ.צ</span>
+          <div><b>Mazal Zipani</b><span>Google Business Profile</span></div>
+        </div>
+      </div>
+      <div class="review-card">
+        <div class="review-stars" aria-hidden="true">★★★★★</div>
+        <p class="review-body">יאיר הגיע אלינו באופן מיידי, ביום שישי. איתר את הנזילה, וייעץ לגבי אופן הטיפול בתשתית ספרינקלרים של הבניין. מחיר הוגן לגמרי. מקצועי ואדיב מאוד.</p>
+        <div class="review-author">
+          <span class="avatar" aria-hidden="true">ד.ג</span>
+          <div><b>דור גבאי</b><span>Google Business Profile</span></div>
+        </div>
       </div>
     </div>
     <div style="text-align:center;">
