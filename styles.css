@@ -214,6 +214,43 @@ footer.site-footer{background:var(--ink);color:rgba(255,255,255,.6);padding:56px
   background:#25D366;color:#fff;display:flex;align-items:center;justify-content:center;
   box-shadow:0 14px 30px -8px rgba(37,211,102,.65);
 }
+.call-float{
+  position:fixed;bottom:96px;left:24px;z-index:60;width:60px;height:60px;border-radius:50%;
+  background:var(--amber);color:var(--navy);display:flex;align-items:center;justify-content:center;
+  box-shadow:0 14px 30px -8px rgba(224,105,28,.65);
+}
+
+/* sticky mobile conversion bar — the primary way to convert on phones */
+.mobile-cta-bar{display:none;}
+@media (max-width:700px){
+  .mobile-cta-bar{
+    display:grid;grid-template-columns:1.15fr 1fr;gap:10px;
+    position:fixed;bottom:0;right:0;left:0;z-index:70;
+    padding:10px 12px calc(10px + env(safe-area-inset-bottom));
+    background:rgba(255,248,242,.97);border-top:1px solid var(--line-strong);
+    box-shadow:0 -8px 24px -12px rgba(6,33,58,.4);
+  }
+  .mobile-cta-bar a{
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    padding:15px 10px;border-radius:11px;font-weight:900;font-size:16px;
+  }
+  .mobile-cta-bar .mc-call{background:var(--amber);color:var(--navy);}
+  .mobile-cta-bar .mc-wa{background:#25D366;color:#fff;}
+  /* the bar replaces the floating buttons on phones */
+  .wa-float,.call-float{display:none;}
+  body{padding-bottom:82px;}
+}
+
+/* inline conversion prompts placed through the body of long pages */
+.cta-strip{
+  background:var(--navy);color:#fff;border-radius:16px;
+  padding:30px 28px;margin:0 auto;max-width:900px;text-align:center;
+}
+.cta-strip h3{font-size:clamp(19px,2.4vw,24px);color:#fff;margin-bottom:8px;}
+.cta-strip p{margin:0 0 20px;opacity:.8;font-size:15px;}
+.cta-strip .cta-strip-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+.cta-strip .btn-wa{background:#25D366;color:#fff;}
+.cta-strip .reassure{display:block;margin-top:14px;font-size:13px;opacity:.65;}
 
 /* service page shared blocks */
 .lede-block{max-width:720px;margin:0 auto;}
