@@ -1,6 +1,23 @@
 import { getEvents, getEventsInLastNDays, dateStr } from './store.mjs';
 import { pageLabel } from './pages.mjs';
 
+// First day our own tracking actually persisted events. Before this the site
+// had a tag installed but nothing was being saved, so any period reaching
+// further back is measuring silence, not a drop in traffic.
+const DATA_START = '2026-08-19';
+
+function coverageNote(days) {
+  if (days <= 1) return null;
+  const from = new Date();
+  from.setDate(from.getDate() - (days - 1));
+  if (dateStr(from) >= DATA_START) return null;
+
+  const start = new Date(DATA_START + 'T00:00:00');
+  const daysOfData = Math.floor((Date.now() - start.getTime()) / 86400000) + 1;
+  const he = (d) => d.toLocaleDateString('he-IL', { timeZone: 'Asia/Jerusalem', day: '2-digit', month: '2-digit' });
+  return `⚠️ המדידה באתר התחילה ב-${he(start)}, כלומר יש ${daysOfData} ימי נתונים בלבד. הימים שלפני כן מופיעים כ-0 כי לא נמדדו — לא כי לא הייתה תנועה.`;
+}
+
 async function collect(days) {
   if (days === 1) {
     const today = dateStr(new Date());
@@ -65,6 +82,9 @@ export async function buildLeadsText(days) {
   );
   lines.push('(בלחיצות האלה אין פרטים אישיים — הלקוח פונה ישירות, בלי להשאיר פרטים באתר)');
 
+  const note = coverageNote(days);
+  if (note) lines.push('', note);
+
   return lines.join('\n');
 }
 
@@ -82,7 +102,7 @@ export async function buildSummaryText(days, title) {
     .slice(0, 3);
   const topPageLines = topPages.map(([path, views]) => `  • ${pageLabel(path)} — ${views} צפיות`).join('\n');
 
-  return [
+  const lines = [
     title,
     '',
     `כניסות: ${sids.size}`,
@@ -92,5 +112,10 @@ export async function buildSummaryText(days, title) {
     topPageLines || '  אין עדיין נתונים',
     '',
     `📞 טלפון: ${phoneEvents.length}   💬 וואטסאפ: ${waEvents.length}   ✅ לידים: ${leadEvents.length}`,
-  ].join('\n');
+  ];
+
+  const note = coverageNote(days);
+  if (note) lines.push('', note);
+
+  return lines.join('\n');
 }
