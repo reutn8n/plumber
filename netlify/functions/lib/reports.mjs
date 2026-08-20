@@ -21,20 +21,22 @@ function coverageNote(days) {
 async function collect(days) {
   if (days === 1) {
     const today = dateStr(new Date());
-    const [pageviews, phoneEvents, waEvents, leadEvents] = await Promise.all([
+    const [pageviews, phoneEvents, waEvents, leadEvents, scrollEvents] = await Promise.all([
       getEvents('pageview', today),
       getEvents('phone_click', today),
       getEvents('whatsapp_click', today),
       getEvents('generate_lead', today),
+      getEvents('scroll', today),
     ]);
-    return { pageviews, phoneEvents, waEvents, leadEvents };
+    return { pageviews, phoneEvents, waEvents, leadEvents, scrollEvents };
   }
 
-  const [pv, ph, wa, ld] = await Promise.all([
+  const [pv, ph, wa, ld, sc] = await Promise.all([
     getEventsInLastNDays('pageview', days),
     getEventsInLastNDays('phone_click', days),
     getEventsInLastNDays('whatsapp_click', days),
     getEventsInLastNDays('generate_lead', days),
+    getEventsInLastNDays('scroll', days),
   ]);
   const flatten = (d) => d.dates.flatMap((date) => d.eventsByDate[date]);
   return {
@@ -42,7 +44,23 @@ async function collect(days) {
     phoneEvents: flatten(ph),
     waEvents: flatten(wa),
     leadEvents: flatten(ld),
+    scrollEvents: flatten(sc),
   };
+}
+
+// How far visitors actually get down the page, as a share of everyone who
+// landed — this is what shows where people give up.
+function scrollLines(scrollEvents, sessionCount) {
+  if (!sessionCount) return null;
+  const reached = {};
+  [25, 50, 75, 100].forEach((d) => {
+    reached[d] = new Set(
+      scrollEvents.filter((e) => e.depth === d).map((e) => e.sid).filter(Boolean)
+    ).size;
+  });
+  return [25, 50, 75, 100]
+    .map((d) => `  ${d}%: ${Math.round((reached[d] / sessionCount) * 100)}% מהמבקרים`)
+    .join('\n');
 }
 
 function formatWhen(ts) {
@@ -89,7 +107,7 @@ export async function buildLeadsText(days) {
 }
 
 export async function buildSummaryText(days, title) {
-  const { pageviews, phoneEvents, waEvents, leadEvents } = await collect(days);
+  const { pageviews, phoneEvents, waEvents, leadEvents, scrollEvents } = await collect(days);
 
   const sids = new Set(pageviews.map((e) => e.sid).filter(Boolean));
 
@@ -113,6 +131,9 @@ export async function buildSummaryText(days, title) {
     '',
     `📞 טלפון: ${phoneEvents.length}   💬 וואטסאפ: ${waEvents.length}   ✅ לידים: ${leadEvents.length}`,
   ];
+
+  const scroll = scrollLines(scrollEvents || [], sids.size);
+  if (scroll) lines.push('', 'עד כמה גללו בעמוד:', scroll);
 
   const note = coverageNote(days);
   if (note) lines.push('', note);

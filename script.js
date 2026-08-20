@@ -23,8 +23,46 @@
       }),
       keepalive: true,
     }).catch(function () {});
+
+    trackScrollDepth(sid);
   } catch (err) {}
 })();
+
+// Records how far down the page each visitor actually gets, so we can see where
+// people give up rather than only that they left.
+function trackScrollDepth(sid) {
+  var milestones = [25, 50, 75, 100];
+  var sent = {};
+
+  function check() {
+    var docHeight = document.body.scrollHeight - window.innerHeight;
+    if (docHeight <= 0) return;
+    var pct = ((window.scrollY / docHeight) * 100);
+
+    for (var i = 0; i < milestones.length; i++) {
+      var m = milestones[i];
+      if (pct >= m && !sent[m]) {
+        sent[m] = true;
+        fetch('/.netlify/functions/track', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: location.pathname, depth: m, sid: sid }),
+          keepalive: true,
+        }).catch(function () {});
+      }
+    }
+    if (sent[100]) window.removeEventListener('scroll', onScroll);
+  }
+
+  var ticking = false;
+  function onScroll() {
+    if (ticking) return;
+    ticking = true;
+    setTimeout(function () { ticking = false; check(); }, 300);
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+}
 
 // Invitation to call — held back until the visitor shows interest, so it reads
 // as an offer rather than an interruption (and stays clear of Google's
