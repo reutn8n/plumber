@@ -1,3 +1,42 @@
+// Where this visitor came from. Worked out once on the first page of a visit
+// and kept for the whole session, so a lead reported later still carries the
+// source that actually brought them in rather than the previous page.
+function visitSource() {
+  try {
+    var saved = sessionStorage.getItem('src');
+    if (saved) return saved;
+
+    var qs = location.search;
+    var ref = document.referrer || '';
+    var src;
+
+    if (/[?&]gclid=/.test(qs)) {
+      src = 'מודעה בגוגל';
+    } else if (/[?&]utm_source=/.test(qs)) {
+      src = 'קמפיין: ' + decodeURIComponent(qs.split('utm_source=')[1].split('&')[0]);
+    } else if (!ref) {
+      src = 'ישיר או מספר שמור';
+    } else if (/(^|\.)google\./.test(ref) && /maps/.test(ref)) {
+      src = 'מפות גוגל';
+    } else if (/(^|\.)google\./.test(ref)) {
+      src = 'חיפוש בגוגל';
+    } else if (/facebook|instagram|fb\.com/.test(ref)) {
+      src = 'פייסבוק או אינסטגרם';
+    } else if (/wa\.me|whatsapp/.test(ref)) {
+      src = 'וואטסאפ';
+    } else if (ref.indexOf(location.host) !== -1) {
+      src = sessionStorage.getItem('src') || 'ישיר או מספר שמור';
+    } else {
+      try { src = 'אתר אחר: ' + new URL(ref).hostname; } catch (e) { src = 'אתר אחר'; }
+    }
+
+    sessionStorage.setItem('src', src);
+    return src;
+  } catch (err) {
+    return null;
+  }
+}
+
 (function trackPageview() {
   try {
     var sid = sessionStorage.getItem('sid');
@@ -17,6 +56,7 @@
       body: JSON.stringify({
         path: location.pathname,
         referrer: document.referrer || null,
+        source: visitSource(),
         device: device,
         isNew: isNew,
         sid: sid,
@@ -145,7 +185,10 @@ function notify(type, extra) {
     fetch('/.netlify/functions/notify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(Object.assign({ type: type, page: location.pathname }, extra)),
+      body: JSON.stringify(Object.assign(
+        { type: type, page: location.pathname, source: visitSource() },
+        extra
+      )),
       keepalive: true,
     }).catch(function () {});
   } catch (err) {}

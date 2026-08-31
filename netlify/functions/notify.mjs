@@ -19,7 +19,7 @@ export default async (req) => {
     return new Response('Invalid JSON', { status: 400 });
   }
 
-  const { type, name, phone, issue, page } = payload;
+  const { type, name, phone, issue, page, source } = payload;
   const label = LABELS[type];
   if (!label) {
     return new Response('Unknown event type', { status: 400 });
@@ -32,6 +32,7 @@ export default async (req) => {
       name: name || null,
       phone: phone || null,
       issue: issue || null,
+      source: source || null,
       city,
     }).catch(() => {});
   }
@@ -40,6 +41,7 @@ export default async (req) => {
   if (name) lines.push(`שם: ${name}`);
   if (phone) lines.push(`טלפון: ${phone}`);
   if (issue) lines.push(`תיאור: ${issue}`);
+  if (source) lines.push(`🔗 הגיע מ: ${source}`);
   if (page) lines.push(`מהעמוד: ${page}`);
 
   try {

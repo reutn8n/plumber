@@ -48,6 +48,21 @@ async function collect(days) {
   };
 }
 
+// Where visits came from, counted once per session.
+function sourceLines(pageviews) {
+  const bySid = {};
+  pageviews.forEach((e) => {
+    if (e.sid && !bySid[e.sid]) bySid[e.sid] = e.source || 'לא ידוע';
+  });
+  const counts = {};
+  Object.values(bySid).forEach((s) => {
+    counts[s] = (counts[s] || 0) + 1;
+  });
+  const rows = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  if (!rows.length) return null;
+  return rows.map(([s, n]) => `  • ${s}: ${n}`).join('\n');
+}
+
 // How far visitors actually get down the page, as a share of everyone who
 // landed — this is what shows where people give up.
 function scrollLines(scrollEvents, sessionCount) {
@@ -88,6 +103,7 @@ export async function buildLeadsText(days) {
         lines.push('');
         lines.push(`• ${e.name || 'ללא שם'} — ${e.phone || 'ללא טלפון'}`);
         if (e.issue) lines.push(`  תיאור: ${e.issue}`);
+        if (e.source) lines.push(`  הגיע מ: ${e.source}`);
         lines.push(`  ${formatWhen(e.ts)}${e.city ? ' · ' + e.city : ''}`);
       });
   } else {
@@ -131,6 +147,9 @@ export async function buildSummaryText(days, title) {
     '',
     `📞 טלפון: ${phoneEvents.length}   💬 וואטסאפ: ${waEvents.length}   ✅ לידים: ${leadEvents.length}`,
   ];
+
+  const sources = sourceLines(pageviews);
+  if (sources) lines.push('', '🔗 מאיפה הגיעו:', sources);
 
   const scroll = scrollLines(scrollEvents || [], sids.size);
   if (scroll) lines.push('', 'עד כמה גללו בעמוד:', scroll);
