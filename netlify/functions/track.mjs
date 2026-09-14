@@ -18,7 +18,7 @@ export default async (req) => {
     return new Response('Invalid JSON', { status: 400 });
   }
 
-  const { path, referrer, device, isNew, sid, depth } = payload;
+  const { path, referrer, source, device, isNew, sid, depth } = payload;
   if (!path) {
     return new Response('Missing path', { status: 400 });
   }
@@ -38,6 +38,7 @@ export default async (req) => {
   await recordEvent('pageview', {
     path,
     referrer: referrer || null,
+    source: source || null,
     device: device || 'desktop',
     isNew: !!isNew,
     sid: sid || null,
