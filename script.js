@@ -194,6 +194,26 @@ function notify(type, extra) {
   } catch (err) {}
 }
 
+// Google Ads counts a conversion only when the event names the conversion action
+// it belongs to. A plain event name reaches GA4 but means nothing to Ads, which
+// is why 438 clicks were reported as zero conversions. Each label below comes
+// from its conversion action in the Ads account (יעדים > המרות > הגדרת התג).
+// An event whose label is blank is still tracked for us, it just is not counted
+// as a conversion by Google Ads.
+var AW_ID = 'AW-18344837091';
+var AW_LABELS = {
+  phone_click: 'v-mJCP7HnZQdEOP_v6tE',
+  whatsapp_click: 'LrbLCIHInZQdEOP_v6tE',
+  generate_lead: 'suG3CPvHnZQdEOP_v6tE',
+};
+
+function reportConversion(type) {
+  if (typeof gtag !== 'function') return;
+  var label = AW_LABELS[type];
+  if (!label) return;
+  gtag('event', 'conversion', { send_to: AW_ID + '/' + label });
+}
+
 document.addEventListener('click', function (e) {
   var link = e.target.closest('a');
   if (!link) return;
@@ -201,9 +221,11 @@ document.addEventListener('click', function (e) {
   var href = link.getAttribute('href') || '';
   if (href.indexOf('tel:') === 0) {
     if (typeof gtag === 'function') gtag('event', 'phone_click', { link_url: href });
+    reportConversion('phone_click');
     notify('phone_click');
   } else if (href.indexOf('wa.me') !== -1 || href.indexOf('api.whatsapp.com') !== -1) {
     if (typeof gtag === 'function') gtag('event', 'whatsapp_click', { link_url: href });
+    reportConversion('whatsapp_click');
     notify('whatsapp_click');
   }
 });
@@ -249,6 +271,7 @@ if (leadForm) {
     if (typeof gtag === 'function') {
       gtag('event', 'generate_lead', { method: 'contact_form' });
     }
+    reportConversion('generate_lead');
     notify('generate_lead', { name: name, phone: phone, issue: issue });
 
     window.open(url, '_blank', 'noopener');
